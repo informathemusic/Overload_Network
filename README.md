@@ -29,8 +29,13 @@ Just go to fast.com, open the DevTooks then go the the network tab.
 
 Reload the page, then look up for requests to `api.fast.com` using the [Filter URLs] search bar.
 Click the only result.
-See the part that looks like this on the right panel that just popped up?
-`/v2?https=true&token=[TOKEN]&urlCount=5`? Copy the [TOKEN] from there.
+
+
+See the part that looks like: 
+```text
+/v2?https=true&token=[TOKEN]&urlCount=5
+```
+ on the right panel that just popped up? Copy the `[TOKEN]` from there.
 
 <sub><sup>...that's it, that's the token right there</sup></sub>
 
