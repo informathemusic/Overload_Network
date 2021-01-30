@@ -8,41 +8,47 @@ let done = 0;
 let t = [];
 let latestProgress = 0;
 
-const printInfo = (p, t) => {
+const progressBarLength = 32;
+
+const printInfo = (p) => {
   if (done < p) {
-		process.stdout.clearLine();
-		process.stdout.cursorTo(0);
-		process.stdout.write(`Progress[${p - 1}]: [${'#'.repeat(16)}]\n`);
-		console.log(`===
-Speed [${p - 1}] (total ${2 ** (p - 1)})
+    process.stdout.clearLine();
+    process.stdout.cursorTo(0);
+    process.stdout.write(`Progress[${p - 1}]: [${'#'.repeat(progressBarLength)}] ${wFACount - 2 ** (p - 1) + 1} / ${2 ** (p - 1) - lost}\n`);
+    console.log(`===
+Speed [${p - 1}] (total ${2 ** (p - 1) - lost})
 Total: ${records[p].toFixed(4)}
 Average: ${(records[p] / (2 ** p - lost)).toFixed(4)}
 Time: ${Date.now() - t[p]}
 Lost: ${lost}
 === ===`);
-		process.stdout.write(`Progress[${p}]: [${' '.repeat(16)}]`);
+    process.stdout.write(`Progress[${p}]: [${' '.repeat(progressBarLength)}] ${wFACount - 2 ** p + 1} / ${2 ** p - lost}`);
     done = p;
   }
 };
 
 const waitForAll = (p) => new Promise((r) => {
   wFACount++;
+  p++;
   const interval = setInterval(() => {
-    if (wFACount >= (2 ** (p + 1)) - (lost + 1)) {
+    if (wFACount >= 2 ** p - lost - 1) {
       clearInterval(interval);
-			lost *= 2;
-			latestProgress = 0;
-			printInfo(p, t);
+      lost *= 2;
+      latestProgress = 0;
+      printInfo(p);
       r();
-		} else {
-			const currentProgress = Math.floor(wFACount / ((2 ** (p + 1)) - (lost + 1)) * 16);
-			if (latestProgress < currentProgress) {
-				process.stdout.clearLine();
-				process.stdout.cursorTo(0);
-				process.stdout.write(`Progress[${p - 1}]: [${'#'.repeat(currentProgress)}${' '.repeat(16 - currentProgress)}]`);
-				latestProgress = currentProgress;
-			}
-		}
+    } else {
+      const currentProgress = Math.floor(
+        ((wFACount - 2 ** (p - 1)) / (2 ** (p - 1) - lost)) * progressBarLength
+      );
+      if (latestProgress < currentProgress) {
+        process.stdout.clearLine();
+        process.stdout.cursorTo(0);
+        process.stdout.write(`Progress[${p - 1}]: [${'#'.repeat(currentProgress)}${' '.repeat(progressBarLength - currentProgress)}] \
+${wFACount - 2 ** (p - 1)} / ${2 ** (p - 1) - lost}`);
+        latestProgress = currentProgress;
+      }
+    }
   }, 100);
 });
 
@@ -54,19 +60,25 @@ const C = async (l) => {
     token: process.env.FAST_TOKEN,
     timeout: 1000,
     unit: FastSpeedtest.UNITS.Mbps, // default: Bps
-	});
-	if (!t[l]) t[l] = Date.now();
-	try{
+  });
+  if (!t[l + 1]) t[l + 1] = Date.now();
+  try{
     const speed = await speedtest.getSpeed()
-    records[l] = (records[l] || 0) + +speed.toFixed(4);
+    records[l + 1] = (records[l + 1] || 0) + +speed.toFixed(4);
     await waitForAll(l);
     C(l + 1);
-		C(l + 1);
-	} catch (e) {
-		lost++;
-	}
+    C(l + 1);
+  } catch (e) {
+    lost++;
+    if (2 ** p - lost - 1 === 0) {
+      console.log(`===
+Emptied out, retrying at rank 0
+===`);
+      C();
+    }
+  }
 };
 
 console.log('=== ===');
-process.stdout.write(`Progress[0]: [${' '.repeat(16)}]`);
+process.stdout.write(`Progress[0]: [${' '.repeat(progressBarLength)}] 0 / 1`);
 C();
